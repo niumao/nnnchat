@@ -1,22 +1,23 @@
-package machat
+package nnnchat
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 
-	"github.com/minaandrawos/machat/chatapi"
+	"github.com/niumao/nnnchat/chatapi"
 
-	"github.com/gorilla/websocket"
+	"github.com/coder/websocket"
 )
 
 type websocketConnWrapper struct {
 	*websocket.Conn
-	msgType int
+	msgType websocket.MessageType
 }
 
 func (wsWrapper *websocketConnWrapper) Read(b []byte) (int, error) {
-	t, r, err := wsWrapper.NextReader()
+	t, r, err := wsWrapper.Conn.Reader(context.Background())
 	wsWrapper.msgType = t
 	if err != nil {
 		log.Println("Websocket err:", err)
@@ -26,42 +27,44 @@ func (wsWrapper *websocketConnWrapper) Read(b []byte) (int, error) {
 }
 
 func (wsWrapper *websocketConnWrapper) Write(p []byte) (int, error) {
-	err := wsWrapper.WriteMessage(wsWrapper.msgType, p)
+	w, err := wsWrapper.Conn.Writer(context.Background(), wsWrapper.msgType)
 	if err != nil {
 		return 0, err
 	}
-	return len(p), nil
+	n, err := w.Write(p)
+	if err != nil {
+		w.Close()
+		return n, err
+	}
+	return n, w.Close()
 }
 
 func (wsWrapper *websocketConnWrapper) Close() error {
-	return wsWrapper.Conn.Close()
+	return wsWrapper.Conn.Close(websocket.StatusNormalClosure, "")
 }
 
 type wsChatHandler struct {
-	*websocket.Upgrader
+	AcceptOptions *websocket.AcceptOptions
 	*chatapi.ChatAPI
 }
 
-//RunWSChatWithExistingAPI starts a websocket chat server with an existing chat api session
-func RunWSChatWithExistingAPI(url, address string, Rbsize, Wbsize int, chat *chatapi.ChatAPI) error {
+// RunWSChatWithExistingAPI starts a websocket chat server with an existing chat api session
+func RunWSChatWithExistingAPI(url, address string, chat *chatapi.ChatAPI) error {
 	wsHandler := &wsChatHandler{
-		Upgrader: &websocket.Upgrader{
-			ReadBufferSize:  Rbsize,
-			WriteBufferSize: Wbsize,
-		},
-		ChatAPI: chat,
+		AcceptOptions: &websocket.AcceptOptions{},
+		ChatAPI:       chat,
 	}
 	http.HandleFunc(url, wsHandler.wshandler)
 	return http.ListenAndServe(address, nil)
 }
 
-//RunWSChat starts a websocket chat server
-func RunWSChat(url, address string, Rbsize, Wbsize int) error {
-	return RunWSChatWithExistingAPI(url, address, Rbsize, Wbsize, chatapi.New())
+// RunWSChat starts a websocket chat server
+func RunWSChat(url, address string) error {
+	return RunWSChatWithExistingAPI(url, address, chatapi.New())
 }
 
 func (wh *wsChatHandler) wshandler(w http.ResponseWriter, r *http.Request) {
-	conn, err := wh.Upgrade(w, r, nil)
+	conn, err := websocket.Accept(w, r, wh.AcceptOptions)
 	if err != nil {
 		log.Println("Error occured while trying to upgrade websocket", err)
 		fmt.Fprintf(w, "Error occured while trying to upgrade websocket: %v", err)

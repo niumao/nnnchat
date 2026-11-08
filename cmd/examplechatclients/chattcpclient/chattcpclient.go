@@ -6,15 +6,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"net"
 	"os"
-	"time"
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-	name := fmt.Sprintf("User%d", rand.Intn(400))
+	name := fmt.Sprintf("User%d", rand.IntN(400))
 	clientName := flag.String("client", name, "name of the client to connect")
 	addr := flag.String("address", "localhost:8989", "address of the chat server")
 	roomName := flag.String("room", "lounge", "name of the chat room")
