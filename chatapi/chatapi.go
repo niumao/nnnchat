@@ -2,17 +2,16 @@ package chatapi
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
+
+	"github.com/niumao/nnnchat/history"
 )
 
 type ChatAPI struct {
-	rooms map[string]*Room
+	rooms   map[string]*Room
+	history history.Store
 	*sync.RWMutex
 }
 
@@ -21,32 +20,33 @@ type clientInfo struct {
 	Name string `json:"name"`
 }
 
-//New start a new instance of the new chat api
+// New start a new instance of the new chat api
 func New() *ChatAPI {
-	api := &ChatAPI{
-		rooms:   make(map[string]*Room),
-		RWMutex: new(sync.RWMutex),
-	}
-	//handle shutdown
-	go func() {
-		// Handle SIGINT and SIGTERM.
-		ch := make(chan os.Signal)
-		signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-		<-ch
-		fmt.Println("Closing tcp connection")
-		api.RLock()
-		defer api.RUnlock()
-		for name, r := range api.rooms {
-			log.Printf("Closing room %s \n", name)
-			close(r.Quit)
-		}
-		os.Exit(0)
-	}()
-
-	return api
+	return NewWithHistory(nil)
 }
 
-//AddClient adds a new client to the chat server. Expects a JSON file
+// NewWithHistory starts a new instance of the chat api that persists and
+// replays room history through the given store. A nil store disables history.
+func NewWithHistory(store history.Store) *ChatAPI {
+	return &ChatAPI{
+		rooms:   make(map[string]*Room),
+		history: store,
+		RWMutex: new(sync.RWMutex),
+	}
+}
+
+// Close shuts down every chat room managed by this API. Callers are
+// responsible for deciding when that should happen (e.g. on process shutdown).
+func (cAPI *ChatAPI) Close() {
+	cAPI.RLock()
+	defer cAPI.RUnlock()
+	for name, r := range cAPI.rooms {
+		log.Printf("Closing room %s \n", name)
+		close(r.Quit)
+	}
+}
+
+// AddClient adds a new client to the chat server. Expects a JSON file
 func (cAPI *ChatAPI) AddClient(c io.ReadWriteCloser) {
 	cinfo := new(clientInfo)
 	if err := json.NewDecoder(c).Decode(cinfo); err != nil {
@@ -61,7 +61,7 @@ func (cAPI *ChatAPI) handleClient(cinfo *clientInfo, c io.ReadWriteCloser) {
 	defer cAPI.Unlock()
 	r, ok := cAPI.rooms[cinfo.Room]
 	if !ok {
-		r = CreateRoom(cinfo.Room)
+		r = CreateRoom(cinfo.Room, cAPI.history)
 	}
 	r.AddClient(c, cinfo.Name)
 	cAPI.rooms[cinfo.Room] = r

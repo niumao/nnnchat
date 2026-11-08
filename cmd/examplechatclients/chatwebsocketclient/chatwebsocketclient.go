@@ -2,51 +2,60 @@ package main
 
 import (
 	"bufio"
+	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"os"
-	"time"
 
-	"golang.org/x/net/websocket"
+	"github.com/coder/websocket"
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-	name := fmt.Sprintf("User%d", rand.Intn(400))
+	name := fmt.Sprintf("User%d", rand.IntN(400))
 	clientName := flag.String("client", name, "name of the client to connect")
 	url := flag.String("address", "ws://localhost:8099/mychat", "address of the chat server")
 	roomName := flag.String("room", "lounge", "name of the chat room")
-	origin := flag.String("origin", "http://localhost:8099/", "origin flag for the websocket client")
 	flag.Parse()
 
-	ws, err := websocket.Dial(*url, "", *origin)
-	defer ws.Close()
+	ctx := context.Background()
+	ws, _, err := websocket.Dial(ctx, *url, nil)
 	if err != nil {
 		log.Fatal("websocket dial error ", err)
 	}
+	defer ws.Close(websocket.StatusNormalClosure, "")
+
 	go func() {
-		scanner := bufio.NewScanner(ws)
-		for scanner.Scan() {
-			fmt.Println(scanner.Text())
+		for {
+			_, msg, err := ws.Read(ctx)
+			if err != nil {
+				// connection is closed or there is an error, exit
+				log.Println("Connection seem to be closed or error occured", err)
+				os.Exit(0)
+			}
+			fmt.Println(string(msg))
 		}
-		//connection is closed or there is an error, exit
-		log.Println("Connection seem to be closed or error occured", scanner.Err())
-		os.Exit(0)
 	}()
+
 	clientInfo := struct {
 		Name string `json:"name"`
 		Room string `json:"room"`
 	}{*clientName, *roomName}
-	err = websocket.JSON.Send(ws, &clientInfo)
+	data, err := json.Marshal(clientInfo)
 	if err != nil {
+		log.Fatal("Could not encode client info", err)
+	}
+	if err := ws.Write(ctx, websocket.MessageText, data); err != nil {
 		log.Fatal("Websocket send error", err)
 	}
 	fmt.Println("Start typing your messages")
 	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() && err == nil {
+	for scanner.Scan() {
 		msg := scanner.Text()
-		_, err = fmt.Fprintf(ws, msg+"\n")
+		if err := ws.Write(ctx, websocket.MessageText, []byte(msg+"\n")); err != nil {
+			log.Fatal("Websocket send error", err)
+		}
 	}
 }
