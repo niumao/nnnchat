@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/niumao/nnnchat/history"
+	"github.com/niumao/nnnchat/internal/history"
 )
 
 // historySize caps how many past messages are retained and replayed per room.

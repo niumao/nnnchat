@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/niumao/nnnchat"
-	"github.com/niumao/nnnchat/chatapi"
-	"github.com/niumao/nnnchat/history"
+	"github.com/niumao/nnnchat/internal/chatapi"
+	"github.com/niumao/nnnchat/internal/history"
 
 	"github.com/redis/go-redis/v9"
 )

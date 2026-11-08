@@ -4,7 +4,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/niumao/nnnchat/chatapi"
+	"github.com/niumao/nnnchat/internal/chatapi"
 )
 
 // RunTCP will start chat tcp server on the provided connection string

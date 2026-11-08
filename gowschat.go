@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/niumao/nnnchat/chatapi"
+	"github.com/niumao/nnnchat/internal/chatapi"
 
 	"github.com/coder/websocket"
 )
