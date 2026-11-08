@@ -6,7 +6,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/niumao/nnnchat/history"
+	"github.com/niumao/nnnchat/internal/history"
 )
 
 type ChatAPI struct {
