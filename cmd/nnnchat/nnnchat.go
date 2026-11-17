@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -35,7 +35,7 @@ func main() {
 	defer stop()
 	go func() {
 		<-ctx.Done()
-		log.Println("Shutting down chat server")
+		slog.Info("shutting down chat server")
 		api.Close()
 		os.Exit(0)
 	}()
@@ -44,7 +44,8 @@ func main() {
 		nnnchat.RunWSChatWithExistingAPI("/mychat", *wsAddr, api)
 	}()
 	if err := nnnchat.RunTCPWithExistingAPI(*tcpAddr, api); err != nil {
-		log.Fatalf("Could not listen on %s, error %s \n", *tcpAddr, err)
+		slog.Error("could not listen", "addr", *tcpAddr, "err", err)
+		os.Exit(1)
 	}
 }
 
@@ -58,7 +59,7 @@ func newHistoryStore(addr string) history.Store {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		log.Printf("Redis at %s not reachable, chat history disabled: %s \n", addr, err)
+		slog.Warn("redis not reachable, chat history disabled", "addr", addr, "err", err)
 		return nil
 	}
 	return history.NewRedisStore(rdb, historySize)

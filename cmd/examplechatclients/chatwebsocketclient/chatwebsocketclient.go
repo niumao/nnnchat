@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"math/rand/v2"
 	"os"
 
@@ -23,7 +23,8 @@ func main() {
 	ctx := context.Background()
 	ws, _, err := websocket.Dial(ctx, *url, nil)
 	if err != nil {
-		log.Fatal("websocket dial error ", err)
+		slog.Error("websocket dial error", "err", err)
+		os.Exit(1)
 	}
 	defer ws.Close(websocket.StatusNormalClosure, "")
 
@@ -32,7 +33,7 @@ func main() {
 			_, msg, err := ws.Read(ctx)
 			if err != nil {
 				// connection is closed or there is an error, exit
-				log.Println("Connection seem to be closed or error occured", err)
+				slog.Info("connection seems to be closed or error occurred", "err", err)
 				os.Exit(0)
 			}
 			fmt.Println(string(msg))
@@ -45,17 +46,20 @@ func main() {
 	}{*clientName, *roomName}
 	data, err := json.Marshal(clientInfo)
 	if err != nil {
-		log.Fatal("Could not encode client info", err)
+		slog.Error("could not encode client info", "err", err)
+		os.Exit(1)
 	}
 	if err := ws.Write(ctx, websocket.MessageText, data); err != nil {
-		log.Fatal("Websocket send error", err)
+		slog.Error("websocket send error", "err", err)
+		os.Exit(1)
 	}
 	fmt.Println("Start typing your messages")
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		msg := scanner.Text()
 		if err := ws.Write(ctx, websocket.MessageText, []byte(msg+"\n")); err != nil {
-			log.Fatal("Websocket send error", err)
+			slog.Error("websocket send error", "err", err)
+			os.Exit(1)
 		}
 	}
 }

@@ -48,6 +48,10 @@ The NNNChat server supports three user flags:
  - `-ws` which is used to indicate the websocket server listening address. The default value is "localhost:8099"
  - `-redis` which is used to indicate the address of a Redis server used to persist chat history. Leaving this empty (the default) disables history
 
+If you don't already have a Redis server handy, the quickest way to get one for local testing is Docker:
+
+    docker run --rm -p 6379:6379 redis:7-alpine
+
 Example command:
 
     <executablename> -tcp localhost:8989 -ws localhost:8099 -redis localhost:6379

@@ -3,7 +3,7 @@ package nnnchat
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/niumao/nnnchat/internal/chatapi"
@@ -20,7 +20,7 @@ func (wsWrapper *websocketConnWrapper) Read(b []byte) (int, error) {
 	t, r, err := wsWrapper.Conn.Reader(context.Background())
 	wsWrapper.msgType = t
 	if err != nil {
-		log.Println("Websocket err:", err)
+		slog.Error("websocket read error", "err", err)
 		return 0, err
 	}
 	return r.Read(b)
@@ -66,7 +66,7 @@ func RunWSChat(url, address string) error {
 func (wh *wsChatHandler) wshandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := websocket.Accept(w, r, wh.AcceptOptions)
 	if err != nil {
-		log.Println("Error occured while trying to upgrade websocket", err)
+		slog.Error("error occurred while trying to upgrade websocket", "err", err)
 		fmt.Fprintf(w, "Error occured while trying to upgrade websocket: %v", err)
 		return
 	}
