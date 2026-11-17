@@ -1,7 +1,7 @@
 package nnnchat
 
 import (
-	"log"
+	"log/slog"
 	"net"
 
 	"github.com/niumao/nnnchat/internal/chatapi"
@@ -16,7 +16,7 @@ func RunTCP(connection string) error {
 func RunTCPWithExistingAPI(connection string, chat *chatapi.ChatAPI) error {
 	l, err := net.Listen("tcp", connection)
 	if err != nil {
-		log.Println("Error connecting to chat client", err)
+		slog.Error("error listening for chat clients", "err", err)
 		return err
 	}
 	defer l.Close()
