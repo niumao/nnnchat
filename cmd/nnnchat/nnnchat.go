@@ -8,13 +8,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/niumao/nnnchat"
 	"github.com/niumao/nnnchat/internal/chatapi"
 	"github.com/niumao/nnnchat/internal/history"
-
-	"github.com/redis/go-redis/v9"
 )
 
 // historySize caps how many past messages are replayed per room; keep in
@@ -26,7 +23,16 @@ func main() {
 	wsAddr := flag.String("ws", "localhost:8099", "Address for the websocket chat server to listen on")
 	redisAddr := flag.String("redis", "", "Address of a Redis server used to persist chat history (empty disables history)")
 	flag.Parse()
-	store := newHistoryStore(*redisAddr)
+
+	var store history.Store
+	if *redisAddr != "" {
+		s, err := history.New(history.Config{Driver: history.DriverRedis, Addr: *redisAddr, Cap: historySize})
+		if err != nil {
+			slog.Warn("history disabled", "err", err)
+		} else {
+			store = s
+		}
+	}
 	api := chatapi.NewWithHistory(store)
 
 	fmt.Printf("NNNChat server starting - tcp=%s ws=%s history=%t\n", *tcpAddr, *wsAddr, store != nil)
@@ -47,20 +53,4 @@ func main() {
 		slog.Error("could not listen", "addr", *tcpAddr, "err", err)
 		os.Exit(1)
 	}
-}
-
-// newHistoryStore returns a Redis-backed history.Store for addr, or nil if
-// addr is empty or Redis is not reachable (chat still works, just without history).
-func newHistoryStore(addr string) history.Store {
-	if addr == "" {
-		return nil
-	}
-	rdb := redis.NewClient(&redis.Options{Addr: addr})
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		slog.Warn("redis not reachable, chat history disabled", "addr", addr, "err", err)
-		return nil
-	}
-	return history.NewRedisStore(rdb, historySize)
 }

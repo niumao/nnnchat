@@ -3,6 +3,8 @@ package history
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -16,6 +18,18 @@ type RedisStore struct {
 // NewRedisStore returns a RedisStore that retains at most cap messages per room.
 func NewRedisStore(client *redis.Client, cap int) *RedisStore {
 	return &RedisStore{client: client, cap: int64(cap)}
+}
+
+// NewRedisStoreFromAddr dials addr and returns a RedisStore that retains at
+// most cap messages per room, or an error if Redis is not reachable.
+func NewRedisStoreFromAddr(addr string, cap int) (*RedisStore, error) {
+	rdb := redis.NewClient(&redis.Options{Addr: addr})
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		return nil, fmt.Errorf("history: redis not reachable at %s: %w", addr, err)
+	}
+	return NewRedisStore(rdb, cap), nil
 }
 
 func historyKey(room string) string {
