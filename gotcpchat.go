@@ -7,11 +7,6 @@ import (
 	"github.com/niumao/nnnchat/internal/chatapi"
 )
 
-// RunTCP will start chat tcp server on the provided connection string
-func RunTCP(connection string) error {
-	return RunTCPWithExistingAPI(connection, chatapi.New())
-}
-
 // RunTCPWithExistingAPI will start chat tcp server on the provided connection string using an existing chat api session
 func RunTCPWithExistingAPI(connection string, chat *chatapi.ChatAPI) error {
 	l, err := net.Listen("tcp", connection)
@@ -20,7 +15,6 @@ func RunTCPWithExistingAPI(connection string, chat *chatapi.ChatAPI) error {
 		return err
 	}
 	defer l.Close()
-	//chat := chatapi.New()
 	for {
 		conn, err := l.Accept()
 		if err != nil {

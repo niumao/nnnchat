@@ -57,8 +57,3 @@ func RunWSChatWithExistingAPI(url, address string, chat *chatapi.ChatAPI) error 
 	})
 	return http.ListenAndServe(address, nil)
 }
-
-// RunWSChat starts a websocket chat server
-func RunWSChat(url, address string) error {
-	return RunWSChatWithExistingAPI(url, address, chatapi.New())
-}
