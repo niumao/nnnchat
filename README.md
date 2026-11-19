@@ -15,6 +15,7 @@ This is a fork of [minaandrawos/machat](https://github.com/minaandrawos/machat) 
  - Added an optional Redis-backed chat history store (`internal/history/`) so new clients can be replayed recent messages when joining a room
  - Bounded per-client message delivery with a small buffered channel and non-blocking sends, so one slow client can no longer pile up unbounded goroutines on the broadcaster
  - Fixed a goroutine leak where a disconnected client's writer goroutine was never signalled to stop
+ - Replaced the mutex-guarded `Room`/`ChatAPI` with a pure-CSP design: each room is a single goroutine (`Room.run`) that owns its client map exclusively and is driven only by typed requests sent over its own `joins`/`leaves`/`messages`/`counts` channels, selected in a loop -- no `sync.RWMutex` anywhere in the room. `ChatAPI` keeps a small `sync.Mutex` purely for room directory lookup/creation (a map op, no I/O under it), so a slow history replay or busy room can never block joins to an unrelated room, and closing a room can't race a client goroutine concurrently sending to it
  - Moved SIGINT/SIGTERM shutdown handling out of the chat API and into the server binary (`cmd/nnnchat`), via an explicit `ChatAPI.Close()`
  - Renamed the Go module/package from `github.com/minaandrawos/machat` to `github.com/niumao/nnnchat` to match this fork
 
@@ -85,9 +86,9 @@ To run the example client application with client name 'Mina' and chat room 'dev
 
  - *./gotcpchat.go*: entry point to the chat TCP server code
  - *./gowschat.go*: entry point to the chat websocket server code
- - *./internal/chatapi/chatapi.go*: top level chat API, wires up chat rooms and the optional history store
- - *./internal/chatapi/clients.go*: code to handle the chat clients, the code is exposed as an API to be used by gotcpchat.go
- - *./internal/chatapi/rooms.go*: code to handle chat rooms, the code is exposed as an API to be used by gotcpchat.go
+ - *./internal/chatapi/chatapi.go*: top level chat API; owns the room directory and the optional history store, exposed as an API to be used by gotcpchat.go/gowschat.go
+ - *./internal/chatapi/room.go*: a chat room as a single goroutine; owns its clients and history exclusively, with no locking, driven by its own joins/leaves/messages/counts channels
+ - *./internal/chatapi/client.go*: wires up a client connection's reader/writer goroutines, translating socket bytes to/from requests on a room's channels
  - *./internal/history/history.go*: the `Store` interface used to persist and replay chat room history
  - *./internal/history/redis.go*: a Redis-backed implementation of `Store`
  - *./cmd/nnnchat/nnnchat.go*: main package for the NNNChat server, you need to build this file to get the executable for the chat server
