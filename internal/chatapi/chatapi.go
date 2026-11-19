@@ -3,7 +3,7 @@ package chatapi
 import (
 	"encoding/json"
 	"io"
-	"log"
+	"log/slog"
 	"sync"
 
 	"github.com/niumao/nnnchat/internal/history"
@@ -47,7 +47,7 @@ func (cAPI *ChatAPI) Close() {
 	cAPI.mu.Unlock()
 
 	for name, r := range rooms {
-		log.Printf("Closing room %s \n", name)
+		slog.Info("closing room", "room", name)
 		close(r.Quit)
 	}
 }
@@ -56,7 +56,7 @@ func (cAPI *ChatAPI) Close() {
 func (cAPI *ChatAPI) AddClient(c io.ReadWriteCloser) {
 	cinfo := new(clientInfo)
 	if err := json.NewDecoder(c).Decode(cinfo); err != nil {
-		log.Printf("Could not create chat room, invalid chat room name, error: %s \n", err)
+		slog.Error("could not create chat room, invalid chat room name", "err", err)
 		return
 	}
 	room := cAPI.roomFor(cinfo.Room)

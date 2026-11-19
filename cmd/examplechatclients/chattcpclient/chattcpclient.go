@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"math/rand/v2"
 	"net"
 	"os"
@@ -19,9 +19,10 @@ func main() {
 	flag.Parse()
 	conn, err := net.Dial("tcp", *addr)
 	if err != nil {
-		log.Fatal("Could not connect to the chat server ", err)
+		slog.Error("could not connect to the chat server", "err", err)
+		os.Exit(1)
 	}
-	log.Println("Connected to the tcp chat system")
+	slog.Info("connected to the tcp chat system")
 
 	defer conn.Close()
 	go func() {
@@ -30,7 +31,7 @@ func main() {
 			fmt.Println(scanner.Text())
 		}
 		//connection is closed or there is an error, exit
-		log.Println("Connection seem to be closed or error occured", scanner.Err())
+		slog.Info("connection seems to be closed or error occurred", "err", scanner.Err())
 		os.Exit(0)
 	}()
 	clientInfo := struct {

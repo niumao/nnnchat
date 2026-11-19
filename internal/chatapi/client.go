@@ -3,7 +3,7 @@ package chatapi
 import (
 	"bufio"
 	"io"
-	"log"
+	"log/slog"
 )
 
 // startClientConn wires up a client's connection: it joins the room, then
@@ -24,7 +24,7 @@ func readLoop(cn io.ReadWriteCloser, room *Room, name string) {
 	scanner := bufio.NewScanner(bufio.NewReader(cn))
 	for scanner.Scan() {
 		text := scanner.Text()
-		log.Printf("%s|%s:%s\n", room.name, name, text)
+		slog.Info("chat message", "room", room.name, "client", name, "text", text)
 		room.messages <- msgReq{name: name, text: text}
 	}
 	room.leaves <- name

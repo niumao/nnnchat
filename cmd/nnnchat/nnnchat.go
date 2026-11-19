@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -35,7 +34,7 @@ func main() {
 	}
 	api := chatapi.NewWithHistory(store)
 
-	fmt.Printf("NNNChat server starting - tcp=%s ws=%s history=%t\n", *tcpAddr, *wsAddr, store != nil)
+	slog.Info("NNNChat server starting", "tcp", *tcpAddr, "ws", *wsAddr, "history", store != nil)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

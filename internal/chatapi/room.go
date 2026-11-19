@@ -2,7 +2,7 @@ package chatapi
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/niumao/nnnchat/internal/history"
@@ -74,7 +74,7 @@ func CreateRoom(rname string, store history.Store) *Room {
 // run is the room's event loop: it owns r.clients exclusively, so every
 // case below can read/write it without a lock.
 func (r *Room) run() {
-	log.Println("Starting chat room", r.name)
+	slog.Info("starting chat room", "room", r.name)
 	for {
 		select {
 		case j := <-r.joins:
@@ -94,10 +94,10 @@ func (r *Room) run() {
 
 func (r *Room) handleJoin(j joinReq) {
 	if _, ok := r.clients[j.name]; ok {
-		log.Printf("Client %s already exist in chat room %s, existing...", j.name, r.name)
+		slog.Warn("client already exists in room, ignoring join", "client", j.name, "room", r.name)
 		return
 	}
-	log.Printf("Adding client %s \n", j.name)
+	slog.Info("adding client", "client", j.name, "room", r.name)
 	r.replayHistory(j.outbox)
 	r.clients[j.name] = j.outbox
 }
@@ -108,7 +108,7 @@ func (r *Room) handleLeave(name string) {
 		// Already removed (e.g. a duplicate leave), nothing to do.
 		return
 	}
-	log.Printf("Removing client %s \n", name)
+	slog.Info("removing client", "client", name, "room", r.name)
 	delete(r.clients, name)
 	// Closing wc stops that client's writeLoop goroutine (its `range outbox`
 	// loop ends), so it doesn't leak after the client disconnects.
@@ -128,7 +128,7 @@ func (r *Room) handleMessage(m msgReq) {
 		select {
 		case wc <- msg:
 		default:
-			log.Printf("Client %s in room %s is not keeping up, dropping message \n", name, r.name)
+			slog.Warn("client not keeping up, dropping message", "client", name, "room", r.name)
 		}
 	}
 }
@@ -164,7 +164,7 @@ func (r *Room) replayHistory(wc chan<- string) {
 	defer cancel()
 	msgs, err := r.history.Recent(ctx, r.name, historySize)
 	if err != nil {
-		log.Printf("Could not load chat history for room %s: %s \n", r.name, err)
+		slog.Warn("could not load chat history", "room", r.name, "err", err)
 		return
 	}
 	for _, m := range msgs {
@@ -186,6 +186,6 @@ func (r *Room) appendHistory(sender, text string) {
 		Ts:     time.Now().Unix(),
 	})
 	if err != nil {
-		log.Printf("Could not persist chat history for room %s: %s \n", r.name, err)
+		slog.Warn("could not persist chat history", "room", r.name, "err", err)
 	}
 }
