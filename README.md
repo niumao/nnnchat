@@ -90,11 +90,8 @@ To run the example client application with client name 'Mina' and chat room 'dev
  - *./internal/chatapi/room.go*: a chat room as a single goroutine; owns its clients and history exclusively, with no locking, driven by its own joins/leaves/messages/counts channels
  - *./internal/chatapi/client.go*: wires up a client connection's reader/writer goroutines, translating socket bytes to/from requests on a room's channels
  - *./internal/history/history.go*: the `Store` interface used to persist and replay chat room history
+ - *./internal/history/factory.go*: `New`/`Config`, used to construct a `Store` from a driver name (currently just `redis`) without callers depending on the concrete implementation
  - *./internal/history/redis.go*: a Redis-backed implementation of `Store`
  - *./cmd/nnnchat/nnnchat.go*: main package for the NNNChat server, you need to build this file to get the executable for the chat server
  - *./cmd/examplechatclients/chattcpclient/chattcpclient.go*: main package for an example TCP client that can connect to the chat server
  - *./cmd/examplechatclients/chatwebsocketclient/chatwebsocketclient.go*: main package for an example websocket client that can connect to the chat server
-
- ----------
- 
- For other articles and tutorials, check the original author's website at www.minaandrawos.com
