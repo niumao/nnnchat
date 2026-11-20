@@ -21,6 +21,7 @@ func main() {
 	tcpAddr := flag.String("tcp", "localhost:8989", "Address for the TCP chat server to listen on")
 	wsAddr := flag.String("ws", "localhost:8099", "Address for the websocket chat server to listen on")
 	redisAddr := flag.String("redis", "", "Address of a Redis server used to persist chat history (empty disables history)")
+	jwtSecret := flag.String("jwtsecret", "", "Shared secret used to verify client JWTs (empty disables auth)")
 	flag.Parse()
 
 	var store history.Store
@@ -32,9 +33,14 @@ func main() {
 			store = s
 		}
 	}
-	api := chatapi.NewWithHistory(store)
 
-	slog.Info("NNNChat server starting", "tcp", *tcpAddr, "ws", *wsAddr, "history", store != nil)
+	var secret []byte
+	if *jwtSecret != "" {
+		secret = []byte(*jwtSecret)
+	}
+	api := chatapi.NewWithAuth(store, secret)
+
+	slog.Info("NNNChat server starting", "tcp", *tcpAddr, "ws", *wsAddr, "history", store != nil, "auth", secret != nil)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

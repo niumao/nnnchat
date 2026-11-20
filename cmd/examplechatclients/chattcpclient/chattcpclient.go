@@ -16,6 +16,7 @@ func main() {
 	clientName := flag.String("client", name, "name of the client to connect")
 	addr := flag.String("address", "localhost:8989", "address of the chat server")
 	roomName := flag.String("room", "lounge", "name of the chat room")
+	token := flag.String("token", "", "JWT to present when the server requires auth")
 	flag.Parse()
 	conn, err := net.Dial("tcp", *addr)
 	if err != nil {
@@ -35,9 +36,10 @@ func main() {
 		os.Exit(0)
 	}()
 	clientInfo := struct {
-		Name string `json:"name"`
-		Room string `json:"room"`
-	}{*clientName, *roomName}
+		Name  string `json:"name"`
+		Room  string `json:"room"`
+		Token string `json:"token"`
+	}{*clientName, *roomName, *token}
 	data, _ := json.Marshal(clientInfo)
 	conn.Write(data)
 	fmt.Println("Start typing your messages")

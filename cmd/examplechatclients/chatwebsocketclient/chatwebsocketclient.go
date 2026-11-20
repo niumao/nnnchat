@@ -18,6 +18,7 @@ func main() {
 	clientName := flag.String("client", name, "name of the client to connect")
 	url := flag.String("address", "ws://localhost:8099/mychat", "address of the chat server")
 	roomName := flag.String("room", "lounge", "name of the chat room")
+	token := flag.String("token", "", "JWT to present when the server requires auth")
 	flag.Parse()
 
 	ctx := context.Background()
@@ -41,9 +42,10 @@ func main() {
 	}()
 
 	clientInfo := struct {
-		Name string `json:"name"`
-		Room string `json:"room"`
-	}{*clientName, *roomName}
+		Name  string `json:"name"`
+		Room  string `json:"room"`
+		Token string `json:"token"`
+	}{*clientName, *roomName, *token}
 	data, err := json.Marshal(clientInfo)
 	if err != nil {
 		slog.Error("could not encode client info", "err", err)
